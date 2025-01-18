@@ -34,6 +34,7 @@
             allCoins = await fetchCoins();
             renderCoins(allCoins.slice(0, 50));
             renderSelectedCoins();
+            setupSearch();
         } catch (error) {
             mainContent.innerHTML = `<h2>Error loading data</h2>`;
             console.error("Error:", error);
@@ -96,6 +97,18 @@
         });
     };
 
+    const setupSearch = () => {
+        const searchInput = document.getElementById("searchInput");
+        searchInput.addEventListener("input", (e) => {
+            const searchTerm = e.target.value.toLowerCase().trim();
+            const filteredCoins = allCoins.filter(coin => 
+                coin.name.toLowerCase().includes(searchTerm) || 
+                coin.symbol.toLowerCase().includes(searchTerm)
+            );
+            renderCoins(filteredCoins.slice(0, 50));
+        });
+    };
+
     const addToReports = (coinId) => {
         if (reports.length >= maxReports) {
             showMaxReportsModal();
@@ -119,43 +132,56 @@
     const showMaxReportsModal = () => {
         const modal = document.getElementById("maxReportsModal");
         modal.style.display = "flex";
+        
         const closeBtn = modal.querySelector(".close-btn");
-        closeBtn.addEventListener("click", () => {
+        const closeModal = () => {
             modal.style.display = "none";
-        });
-        window.addEventListener("click", (e) => {
-            if (e.target === modal) modal.style.display = "none";
-        });
+        };
+        
+        closeBtn.onclick = closeModal;
+        modal.onclick = (event) => {
+            if (event.target === modal) {
+                closeModal();
+            }
+        };
     };
 
     const renderModal = async (coinId) => {
         try {
             const response = await fetch(`${apiBaseUrl}/coins/${coinId}`);
+            if (!response.ok) throw new Error(`Error fetching coin data: ${response.status}`);
             const coin = await response.json();
-            const modalHTML = `
-                <div id="modal" class="modal">
-                    <div class="modal-content">
-                        <span class="close-btn">&times;</span>
-                        <h2>${coin.name}</h2>
-                        <p>Symbol: ${coin.symbol}</p>
-                        <p>Current Price:</p>
-                        <ul>
-                            <li>USD: $${coin.market_data?.current_price?.usd || "N/A"}</li>
-                            <li>EUR: €${coin.market_data?.current_price?.eur || "N/A"}</li>
-                            <li>ILS: ₪${coin.market_data?.current_price?.ils || "N/A"}</li>
-                        </ul>
-                    </div>
-                </div>
+    
+            const modalContainer = document.getElementById("modalContainer");
+            const modalTitle = document.getElementById("modalTitle");
+            const modalImage = document.getElementById("modalImage");
+            const modalDetails = document.getElementById("modalDetails");
+    
+            modalTitle.textContent = coin.name;
+            modalImage.src = coin.image.large;
+            modalDetails.innerHTML = `
+                <li>Symbol: ${coin.symbol.toUpperCase()}</li>
+                <li>USD: $${coin.market_data?.current_price?.usd?.toFixed(2) || 'N/A'}</li>
+                <li>EUR: €${coin.market_data?.current_price?.eur?.toFixed(2) || 'N/A'}</li>
+                <li>ILS: ₪${coin.market_data?.current_price?.ils?.toFixed(2) || 'N/A'}</li>
             `;
-            document.body.insertAdjacentHTML("beforeend", modalHTML);
-            const modal = document.getElementById("modal");
-            const closeBtn = modal.querySelector(".close-btn");
-            closeBtn.addEventListener("click", () => modal.remove());
-            window.addEventListener("click", (e) => {
-                if (e.target === modal) modal.remove();
-            });
+    
+            modalContainer.style.display = 'flex';
+    
+            const closeBtn = modalContainer.querySelector(".close-btn");
+            const closeModal = () => {
+                modalContainer.style.display = 'none';
+            };
+    
+            closeBtn.onclick = closeModal;
+            modalContainer.onclick = (event) => {
+                if (event.target === modalContainer) {
+                    closeModal();
+                }
+            };
+    
         } catch (error) {
-            console.error("Error fetching coin data:", error);
+            console.error("Error rendering modal:", error);
         }
     };
 
@@ -233,7 +259,14 @@
 
     const setupNavigation = () => {
         document.getElementById("homeBtn").addEventListener("click", renderHome);
+        document.getElementById("aboutBtn").addEventListener("click", renderAbout);
         document.getElementById("reportBtn").addEventListener("click", renderReports);
+    };
+
+    const renderAbout = () => {
+        const aboutContent = document.getElementById("aboutContent").innerHTML;
+        const mainContent = document.getElementById("mainContent");
+        mainContent.innerHTML = aboutContent;
     };
 
     renderHome();
